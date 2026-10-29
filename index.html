@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<!-- EdgePilot — vlastní obal pro plochu iPadu / iPhonu (29.10.2026). Jen tmavý horní okraj (stavový pruh) + vložený deník z Google Apps Scriptu.
+     Žádná data, žádný klíč: adresu webové aplikace s klíčem vloží Pavel jednou v zařízení (localStorage tohoto obalu). -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#121A27">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EdgePilot">
+<meta name="referrer" content="no-referrer">
+<title>EdgePilot</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #121A27; --bg2: #182233; --text: #EEF2F8; --text2: #A9B4C6; --blue: #4D9EFF; --border: #2A3650; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  #app { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); bottom: env(safe-area-inset-bottom); width: 100%; height: calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom)); border: 0; background: var(--bg); }
+  #hot { position: fixed; left: 0; top: 0; width: 64px; height: max(env(safe-area-inset-top), 12px); z-index: 2; }
+  #setup { display: none; max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 32px) 20px 32px; }
+  #setup h1 { font-size: 20px; margin: 0 0 8px; } #setup p { color: var(--text2); margin: 0 0 16px; }
+  textarea { box-sizing: border-box; width: 100%; min-height: 96px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font: 14px ui-monospace, monospace; }
+  button { margin-top: 12px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 600 15px -apple-system, system-ui, sans-serif; }
+  #err { color: #FF9F43; min-height: 1.5em; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="setup">
+  <h1>EdgePilot</h1>
+  <p>Vlož jednou adresu deníku pro iPad (…/exec?view=ipad&amp;key=…). Uloží se jen v tomto zařízení. Změna později: podrž prst vlevo nahoře na stavovém pruhu.</p>
+  <textarea id="u" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec?view=ipad&amp;key=…"></textarea>
+  <button id="save" type="button">Uložit a otevřít</button>
+  <div id="err" role="alert"></div>
+</div>
+<div id="hot" aria-hidden="true"></div>
+<script>
+(function () {
+  var K = 'ep_url', RE = /^https:\/{2}script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec\?/;
+  function get() { try { return localStorage.getItem(K) || ''; } catch (e) { return ''; } }
+  function norm(v) { v = String(v || '').trim(); if (!RE.test(v) || !/[?&]key=/.test(v)) return ''; return /[?&]view=ipad/.test(v) ? v : v + '&view=ipad'; }
+  function open(u) {
+    document.getElementById('setup').style.display = 'none';
+    var f = document.getElementById('app');
+    if (!f) { f = document.createElement('iframe'); f.id = 'app'; f.title = 'EdgePilot'; f.setAttribute('allow', 'clipboard-read; clipboard-write'); document.body.appendChild(f); }
+    f.src = u;
+  }
+  function setup(msg) {
+    var f = document.getElementById('app'); if (f) f.remove();
+    document.getElementById('setup').style.display = 'block'; document.getElementById('u').value = get();
+    document.getElementById('err').textContent = msg || '';
+  }
+  document.getElementById('save').onclick = function () {
+    var u = norm(document.getElementById('u').value);
+    if (!u) { document.getElementById('err').textContent = 'Adresa musí být https://script.google.com/macros/s/…/exec s parametrem key.'; return; }
+    try { localStorage.setItem(K, u); } catch (e) { document.getElementById('err').textContent = 'Úložiště zařízení nejde zapsat — adresa platí jen do zavření.'; }
+    open(u);
+  };
+  var t = null, hot = document.getElementById('hot');
+  hot.addEventListener('touchstart', function () { t = setTimeout(function () { setup('Změna adresy deníku.'); }, 900); }, { passive: true });
+  ['touchend', 'touchcancel'].forEach(function (e) { hot.addEventListener(e, function () { clearTimeout(t); }); });
+  var u = norm(get()); if (u) open(u); else setup('');
+})();
+</script>
+</body>
+</html>
