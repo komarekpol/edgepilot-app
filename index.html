@@ -38,9 +38,16 @@
 <div id="hot" aria-hidden="true"></div>
 <script>
 (function () {
-  var K = 'ep_url', RE = /^https:\/{2}script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec\?/;
+  // 29.10.2026: volnější kontrola — Safari kopíruje i /macros/u/0/s/…, bez https, s mezerami nebo uvozovkami
+  var K = 'ep_url', RE = /^https:\/{2}script\.google(usercontent)?\.com\/[^\s]*\/(exec|dev)(\?|$)/i;
   function get() { try { return localStorage.getItem(K) || ''; } catch (e) { return ''; } }
-  function norm(v) { v = String(v || '').trim(); if (!RE.test(v) || !/[?&]key=/.test(v)) return ''; return /[?&]view=ipad/.test(v) ? v : v + '&view=ipad'; }
+  function norm(v) {
+    v = String(v || '').replace(/[\s"'<>\u200B]+/g, '');
+    if (/^script\.google/i.test(v)) v = 'https://' + v;
+    v = v.replace(/^http:\/{2}/i, 'https://');
+    if (!RE.test(v)) return '';
+    return /[?&]view=ipad/.test(v) ? v : v + (v.indexOf('?') < 0 ? '?' : '&') + 'view=ipad';
+  }
   function open(u) {
     document.getElementById('setup').style.display = 'none';
     var f = document.getElementById('app');
@@ -54,7 +61,7 @@
   }
   document.getElementById('save').onclick = function () {
     var u = norm(document.getElementById('u').value);
-    if (!u) { document.getElementById('err').textContent = 'Adresa musí být https://script.google.com/macros/s/…/exec s parametrem key.'; return; }
+    if (!u) { document.getElementById('err').textContent = 'Tohle nevypadá jako adresa deníku (čekám https://script.google.com/macros/…/exec?…&key=…). Vloženo: ' + (document.getElementById('u').value || '').slice(0, 60) + '…'; return; }
     try { localStorage.setItem(K, u); } catch (e) { document.getElementById('err').textContent = 'Úložiště zařízení nejde zapsat — adresa platí jen do zavření.'; }
     open(u);
   };
